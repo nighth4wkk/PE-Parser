@@ -21,9 +21,8 @@ HashJson Hashes = {0};
 DataDirectoriesJson DataDirs = {0};
 
 
-/* 			For debug purposes 			*/
 void print_debug_info() {
-	printf("========DEBUGGING===============\n");
+	printf("\n");
 	printf("Signature: %s\n", Header.signature);
 	printf("Number of sections: %d\n", Header.numofsections);
 	printf("SizeOfOptionalHeader 0x%X\n", Header.sizeofoptheader);
@@ -41,7 +40,6 @@ void print_debug_info() {
 	printf("Resources Table: RVA-0x%X, Size-0x%X\n", DataDirs.resource_rva, DataDirs.resource_size);
 
 }
-/* ------------------------------------ */
 
 
 void print_hexdump(const unsigned char* buf) {
@@ -55,6 +53,7 @@ void print_hexdump(const unsigned char* buf) {
 	}
 	printf("\n\n");
 }
+
 
 void pack_data(char* arg) {
 	File.path = arg;
@@ -89,14 +88,13 @@ int main(int argc, char* argv[]) {
 	pe_header(buf);
 	optional_header(buf);
 	data_directories(buf);
-	section_table(buf);
 	sha256(buf, outBuf_sha256);
 	md5(buf, outBuf_md5);
-
+	print_debug_info();
+	section_table(buf);
 	pack_data(argv[1]);
 	int a = 0;
 	if (argc == 3) {if (!strcmp(argv[2], "-json")) {a = json_output();}}
 	if (a == 1) {printf("Error with opening an output.json\n");}
-	print_debug_info();
 	return 0;
 }	
