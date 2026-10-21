@@ -98,55 +98,49 @@ static void section_flags_to_json(FILE *f, uint32_t c) {
     fputs("]", f);
 }
 
-
-
 void file_to_json(FILE* f) {
-	bool last = false;
 	fprintf(f, "\"file\": {");
-    json_kv_str(f, "path", File.path); json_comma(f, &last); 
-    json_kv_u32(f, "size", File.size); json_comma(f, &last);
-    json_kv_str(f, "type", (File.type == PE32_MAGIC ? "PE32" : "PE32+")); json_comma(f, &last);
-    json_kv_str(f, "machine", machine_name(File.machine)); json_comma(f, &last);
-    json_kv_str(f, "subsystem", subsystem_name(File.subsystem)); json_comma(f, &last);
+    json_kv_str(f, "path", File.path); json_comma(f); 
+    json_kv_u32(f, "size", File.size); json_comma(f);
+    json_kv_str(f, "type", (File.type == PE32_MAGIC ? "PE32" : "PE32+")); json_comma(f);
+    json_kv_str(f, "machine", machine_name(File.machine)); json_comma(f);
+    json_kv_str(f, "subsystem", subsystem_name(File.subsystem)); json_comma(f);
     json_kv_u32(f, "timestamp_raw", File.timestamp);
     fprintf(f, "\n\t},\n");
 }
 
 void hashes_to_json(FILE* f) {
-    bool last = false;
     fprintf(f, "\"hashes\": {");
-    json_kv_str(f, "md5", Hashes.md5); json_comma(f, &last);
+    json_kv_str(f, "md5", Hashes.md5); json_comma(f);
     json_kv_str(f, "sha256", Hashes.sha256);
     fprintf(f, "\n\t},\n");
 }
 
 void headers_to_json(FILE* f) {
-    bool last = false;
     fprintf(f, "\"headers\": {");
-    json_kv_str(f, "nt_signature", Header.signature); json_comma(f, &last);
-    json_kv_hex(f, "nt_signature_raw", (uint64_t)Header.signature_raw); json_comma(f, &last);
-    json_kv_hex(f, "entry_point_rva", Header.entrypoint); json_comma(f, &last);
-    json_kv_hex(f, "image_base", Header.imagebase); json_comma(f, &last);
-    json_kv_hex(f, "num_of_sections", Header.numofsections); json_comma(f, &last);
-    json_kv_hex(f, "section_alignment", Header.sectionalignment); json_comma(f, &last);
-    json_kv_hex(f, "file_alignment", Header.filealignment); json_comma(f, &last);
-    json_kv_hex(f, "major_subsystem_version", Header.majorsubversion); json_comma(f, &last);
-    json_kv_hex(f, "minor_subsystem_version", Header.minorsubversion); json_comma(f, &last);
+    json_kv_str(f, "nt_signature", Header.signature); json_comma(f);
+    json_kv_hex(f, "nt_signature_raw", (uint64_t)Header.signature_raw); json_comma(f);
+    json_kv_hex(f, "entry_point_rva", Header.entrypoint); json_comma(f);
+    json_kv_hex(f, "image_base", Header.imagebase); json_comma(f);
+    json_kv_hex(f, "num_of_sections", Header.numofsections); json_comma(f);
+    json_kv_hex(f, "section_alignment", Header.sectionalignment); json_comma(f);
+    json_kv_hex(f, "file_alignment", Header.filealignment); json_comma(f);
+    json_kv_hex(f, "major_subsystem_version", Header.majorsubversion); json_comma(f);
+    json_kv_hex(f, "minor_subsystem_version", Header.minorsubversion); json_comma(f);
     json_kv_hex(f, "number_of_rva", Header.numofrvaandsizes);
     fprintf(f, "\n\t},\n");
 }
 
 void sections_to_json(FILE* f) {
-    bool last = false;
     fprintf(f, "\"sections\": [");
     for (size_t i = 0; i < sections.count; ++i) {
         Section* s = &sections.SectionsList[i];
         fprintf(f, "\n\t{");
-        json_kv_str(f, "name", s->name); json_comma(f, &last);
-        json_kv_hex(f, "va", s->virtual_address); json_comma(f, &last);
-        json_kv_u32(f, "virtual_size", s->virtual_size); json_comma(f, &last);
-        json_kv_u32(f, "raw_size", s->raw_size); json_comma(f, &last);
-        json_kv_hex(f, "raw_offset", s->pointer_to_raw); json_comma(f, &last);
+        json_kv_str(f, "name", s->name); json_comma(f);
+        json_kv_hex(f, "rva", s->r_virtual_address); json_comma(f);
+        json_kv_u32(f, "virtual_size", s->virtual_size); json_comma(f);
+        json_kv_u32(f, "raw_size", s->raw_size); json_comma(f);
+        json_kv_hex(f, "raw_offset", s->pointer_to_raw); json_comma(f);
         json_key(f, "characteristics");
         section_flags_to_json(f, s->characteristics);
 

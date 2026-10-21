@@ -10,7 +10,7 @@
 
 typedef struct {
 	char name[9];
-	uint32_t virtual_address;
+	uint32_t r_virtual_address;
 	uint32_t virtual_size;
 	uint32_t raw_size;
     uint32_t pointer_to_raw;
@@ -68,8 +68,6 @@ typedef struct {
 	uint32_t resource_rva;
 	uint32_t resource_size;
 } DataDirectoriesJson;
-
-
 
 extern FileJson File;
 extern HashJson Hashes;

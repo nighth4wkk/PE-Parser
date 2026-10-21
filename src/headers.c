@@ -16,7 +16,6 @@ unsigned char* file_read(const char* file) {
 	size_t size = (size_t)st.st_size;
 	unsigned char* buf = calloc(size, sizeof(char));
 	if (!buf) {perror("calloc"); close(fd); free(buf); exit(1);}
-
 	size_t off = 0;
 	while (off < size) {
 		int n = read(fd, buf+off, size-off);
@@ -82,9 +81,7 @@ void optional_header(const unsigned char* buf) {
 	Header.majorsubversion = u16_read(buf, opt_Base + 48);
 	Header.minorsubversion = u16_read(buf, opt_Base + 50);
 	Header.dll_characteristics = u16_read(buf, opt_Base + 70);
-
 	if (magic == PE32_MAGIC) { 
-
 		uint32_t EntryPoint_addr = u32_read(buf, Header.optbase+16);
 		uint32_t ImageBase = u32_read(buf, Header.optbase+28);
 		uint32_t NumberOfRvaAndSizes = u32_read(buf, Header.optbase+92);
@@ -92,7 +89,6 @@ void optional_header(const unsigned char* buf) {
 		Header.entrypoint = (uint64_t)EntryPoint_addr;
 		Header.imagebase = (uint64_t)ImageBase;
 	} else if (magic == PE32P_MAGIC) {
-		
 		uint32_t EntryPoint_addr = u32_read(buf, Header.optbase+16);
 		uint64_t ImageBase = u64_read(buf, Header.optbase+24);
 		uint32_t NumberOfRvaAndSizes = u32_read(buf, Header.optbase+108);
@@ -113,27 +109,20 @@ void data_directories(const unsigned char* buf) {
 		uint32_t import_size = 0;
 		uint32_t resource_rva = 0;
 		uint32_t resource_size = 0;
-
 		if (Header.magic == PE32_MAGIC) { 
 			export_rva = u32_read(buf, Header.optbase+96);
 			export_size = u32_read(buf, Header.optbase+96+4);
-
 			import_rva = u32_read(buf, Header.optbase+104);
 			import_size = u32_read(buf, Header.optbase+104+4);
-
 			resource_rva = u32_read(buf, Header.optbase+112);
 			resource_size = u32_read(buf, Header.optbase+112+4);
-		
 		} else if (Header.magic == PE32P_MAGIC) {
 			export_rva = u32_read(buf, Header.optbase+112);
 			export_size = u32_read(buf, Header.optbase+112+4);
-
 			import_rva = u32_read(buf, Header.optbase+120);
 			import_size = u32_read(buf, Header.optbase+120+4);
-
 			resource_rva = u32_read(buf, Header.optbase+128);
 			resource_size = u32_read(buf, Header.optbase+128+4);
-			
 		} else {
 			printf("Malformed Header Magic (not PE32 or PE32+)\n");
 		}
@@ -146,30 +135,23 @@ void data_directories(const unsigned char* buf) {
 	}
 }
 
-
 void section_table(const unsigned char* buf) {
 	uint32_t table_off = Header.optbase = Header.optbase + Header.sizeofoptheader;
 	uint32_t n = Header.numofsections;
 	if (n > MAX_SECTIONS) {n = MAX_SECTIONS;}
-
-	if ((uint64_t)table_off + (uint64_t)n * 40 > Header.size) {printf("Section table out of bounds\n");}
-		
-	printf("Sections:\n");
+	if ((uint64_t)table_off + (uint64_t)n * 40 > Header.size) {
+		printf("Section table out of bounds\n");
+	}
 	for (uint32_t i = 0; i < n; ++i) {
 		uint32_t offset = table_off + 40*i;
 		Section* s = &sections.SectionsList[i];
 		memcpy(s->name, buf+offset, 8);
 		s->name[8] = '\0';
 		s->virtual_size = u32_read(buf, offset+8);
-		s->virtual_address = u32_read(buf, offset+12);
+		s->r_virtual_address = u32_read(buf, offset+12);
 		s->raw_size = u32_read(buf, offset+16);
 		s->pointer_to_raw = u32_read(buf, offset+20);
 		s->characteristics = u32_read(buf, offset+36);
 		sections.count += 1;
-		printf("\t[%d] %s\n", i, s->name);
-		printf("\t\tRawSize: 0x%X\n", s->raw_size);
-		printf("\t\tVirtualSize: 0x%X\n", s->virtual_size);
-		printf("\t\tPointerToRawData: 0x%X\n", s->pointer_to_raw);
-		printf("\t\tRVA: 0x%X\n", s->virtual_address);
 	}	
 }

@@ -4,8 +4,8 @@
 #include "json.h"
 #include "serialize.h"
 
-void json_comma(FILE* f, bool* comma) {
-	if (*comma == 0) {fprintf(f, ", ");}
+void json_comma(FILE* f) {
+	fprintf(f, ", ");
 }
 
 void json_key(FILE* f, const char* k) {
@@ -36,7 +36,6 @@ void json_kv_str(FILE* f, const char* k, const char* v) {
     json_escape(f, k);
     fputs(": ", f);
     json_escape(f, v);
-    // fprintf(f, "\n\t\"%s\": \"%s\"", k, v);
 }
 
 void json_kv_u32(FILE* f, const char* k, uint32_t v) {
@@ -51,8 +50,6 @@ void json_kv_hex(FILE* f, const char* k, uint64_t v) {
     fprintf(f, "\n\t\"%s\": \"0x%llX\"", k, (unsigned long long)v);
 }
 
-
-/* Main func to make JSON-format output */
 int json_output() {
 	FILE* f = fopen("output.json", "w");
 	if (!f) {return 1;};
@@ -65,4 +62,3 @@ int json_output() {
 	fclose(f);
     return 0;
 }
-/* ------------------------------------ */
