@@ -12,14 +12,16 @@
 #include "headers.h"
 #include "serialize.h"
 #include "json.h"
-
+#include "data_directories.h"
 
 HeadersInfo Header = {0};
 Sections sections = {0};
 FileJson File = {0};
 HashJson Hashes = {0};
-DataDirectoriesJson DataDirs = {0};
-
+DataDirectories DataDirs = {0};
+Export Exports = {0};
+Import Imports = {0};
+Import_Element imp_elem = {0};
 
 void pe_info() {
 	printf("\n");
@@ -77,6 +79,9 @@ int main(int argc, char* argv[]) {
 		printf("Malformed e_lfanew\n");
 		return 0;
 	}
+	if (u32_read(buf, Header.e_lfanew) != 0x00004550) {
+		printf("Malformed PE-signature (not PE)\n");
+	}
 
 	Header.optbase = Header.e_lfanew + 24;
 	pe_header(buf);
@@ -86,6 +91,7 @@ int main(int argc, char* argv[]) {
 	md5(buf, outBuf_md5);
 	section_table(buf);
 	pe_info();
+	find_for_table_entry(buf);
 	pack_data(argv[1]);
 	int a = 0;
 	if (argc == 3) {if (!strcmp(argv[2], "-json")) {a = json_output();}}

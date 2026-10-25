@@ -39,7 +39,7 @@ void json_kv_str(FILE* f, const char* k, const char* v) {
 }
 
 void json_kv_u32(FILE* f, const char* k, uint32_t v) {
-    fprintf(f, "\n\t\"%s\": %d", k, v);
+    fprintf(f, "\n\t\"%s\": %u", k, v);
 }
 
 void json_kv_u64(FILE* f, const char* k, uint64_t v) {
@@ -58,6 +58,8 @@ int json_output() {
 	hashes_to_json(f);
 	headers_to_json(f);
 	sections_to_json(f);
+    exports_to_json(f);
+    imports_to_json(f);
 	fprintf(f, "\n}\n");
 	fclose(f);
     return 0;

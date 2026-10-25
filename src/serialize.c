@@ -147,7 +147,57 @@ void sections_to_json(FILE* f) {
         if (i != sections.count - 1) {
             fprintf(f, "\n\t},");
         } else {
-            fprintf(f, "\n\t}\n\t]");
+            fprintf(f, "\n\t}\n\t],\n");
+        }
+    }
+}
+
+void exports_to_json(FILE* f) {
+    if (Exports.count != 0) {
+        fprintf(f, "\"exports\": {");
+        json_kv_u32(f, "count", Exports.count); json_comma(f);
+        fprintf(f, "\n\t\"functions\": [");
+        for (size_t i = 0; i < Exports.count; ++i) {
+            fprintf(f, "\n\t{");
+            json_kv_str(f, "name", Exports.names[i]); json_comma(f);
+            json_kv_hex(f, "rva", Exports.rva[i]);
+            if (i != Exports.count - 1) {
+                fprintf(f, "\n\t},");
+            } else {
+                fprintf(f, "\n\t}\n\t]");
+            }
+        }
+        fprintf(f, "\n\t},\n");
+    }
+}
+
+void imports_to_json(FILE* f) {
+    if (Imports.count != 0) {
+        fprintf(f, "\"imports\": [");
+        for (size_t i = 0; i < Imports.count; ++i) {
+            Import_Element* imp_elem = &Imports.elements[i];
+            fprintf(f, "\n\t{");
+            json_kv_str(f, "name", imp_elem->dllname); json_comma(f);
+            fprintf(f, "\n\t\"functions\": [");
+            int idx = 0;
+            if (imp_elem->names[idx] == 0) {
+                fprintf(f, "]");
+            } else {
+                while (imp_elem->names[idx] != 0) {
+                    fprintf(f, "\n\t{");
+                    json_kv_str(f, "name", imp_elem->names[idx++]);
+                    if (imp_elem->names[idx] != 0) {
+                        fprintf(f, "\n\t},");
+                    } else {
+                        fprintf(f, "\n\t}\n\t]");
+                    }
+                }
+                if (i == Imports.count - 1) {
+                    fprintf(f, "\n\t}\n\t]");
+                } else {
+                    fprintf(f, "\n\t},\n\t");
+                }
+            }
         }
     }
 }

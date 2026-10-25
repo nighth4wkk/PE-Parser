@@ -10,19 +10,36 @@
 
 unsigned char* file_read(const char* file) {
 	int fd = open(file, O_RDONLY);
-	if (fd < 0) {printf("Incorrect input file\n"); exit(1);}
+	if (fd < 0) {
+		printf("Incorrect input file\n");
+		exit(1);
+	}
 	struct stat st;
-	if (fstat(fd, &st) == -1) {close(fd); exit(1);}
+	if (fstat(fd, &st) == -1) {
+		close(fd);
+		exit(1);
+	}
 	size_t size = (size_t)st.st_size;
 	unsigned char* buf = calloc(size, sizeof(char));
-	if (!buf) {perror("calloc"); close(fd); free(buf); exit(1);}
+	if (!buf) {
+		perror("calloc");
+		close(fd);
+		free(buf);
+		exit(1);
+	}
 	size_t off = 0;
 	while (off < size) {
 		int n = read(fd, buf+off, size-off);
-		if (n<0) {perror("read"); close(fd); free(buf); exit(1);}
+		if (n<0) {
+			perror("read");
+			close(fd);
+			free(buf);
+			exit(1);
+		}
 		off += (size_t)n;
 	}
 	Header.size = size;
+	close(fd);
 	return buf;
 }
 
@@ -31,15 +48,19 @@ void sha256(const unsigned char* buffer, char outputBuffer[65]) {
 	unsigned char hash[EVP_MAX_MD_SIZE];
 	unsigned int output_len = 0;
 	EVP_MD_CTX* context = EVP_MD_CTX_new();
-	EVP_DigestInit_ex(context, EVP_sha256(), NULL);
-	EVP_DigestUpdate(context, buffer, n);
-	EVP_DigestFinal_ex(context, hash, &output_len);
-	EVP_MD_CTX_free(context);
-	for (unsigned int i=0; i<output_len; ++i) {
-		sprintf((char*)(outputBuffer+(i*2)), "%02x", hash[i]);
+	if (context == NULL) {
+		printf("[-] SHA256 error\n");
+	} else {
+		EVP_DigestInit_ex(context, EVP_sha256(), NULL);
+		EVP_DigestUpdate(context, buffer, n);
+		EVP_DigestFinal_ex(context, hash, &output_len);
+		EVP_MD_CTX_free(context);
+		for (unsigned int i=0; i<output_len; ++i) {
+			sprintf((char*)(outputBuffer+(i*2)), "%02x", hash[i]);
+		}
+		outputBuffer[64] = 0;
+		Hashes.sha256 = outputBuffer;
 	}
-	outputBuffer[64] = 0;
-	Hashes.sha256 = outputBuffer;
 }
 
 void md5(const unsigned char* buffer, char outputBuffer[33]) {
@@ -47,27 +68,33 @@ void md5(const unsigned char* buffer, char outputBuffer[33]) {
 	unsigned char hash[16];
 	unsigned int output_len = 0;
 	EVP_MD_CTX* context = EVP_MD_CTX_new();
-	EVP_DigestInit_ex(context, EVP_md5(), NULL);
-	EVP_DigestUpdate(context, buffer, n);
-	EVP_DigestFinal_ex(context, hash, &output_len);
-	EVP_MD_CTX_free(context);
-	for (unsigned int i=0; i<output_len; ++i) {
-		sprintf((char*)(outputBuffer+(i*2)), "%02x", hash[i]);
+	if (context == NULL) {
+		printf("[-] MD5 error\n");
+	} else {
+		EVP_DigestInit_ex(context, EVP_md5(), NULL);
+		EVP_DigestUpdate(context, buffer, n);
+		EVP_DigestFinal_ex(context, hash, &output_len);
+		EVP_MD_CTX_free(context);
+		for (unsigned int i=0; i<output_len; ++i) {
+			sprintf((char*)(outputBuffer+(i*2)), "%02x", hash[i]);
+		}
+		outputBuffer[32] = 0;
+		Hashes.md5 = outputBuffer;
 	}
-	outputBuffer[32] = 0;
-	Hashes.md5 = outputBuffer;
 }
 
 void pe_header(const unsigned char* buf) {
 	uint16_t SizeOfOptionalHeader = u16_read(buf, Header.e_lfanew+20);
-	if (SizeOfOptionalHeader > Header.size - (Header.e_lfanew + 24)) {printf("Malformed OptionalHeader - uncorrect size 0x%X\n", SizeOfOptionalHeader);}
+	if (SizeOfOptionalHeader > Header.size - (Header.e_lfanew + 24)) {
+		printf("Malformed OptionalHeader - uncorrect size 0x%X\n", SizeOfOptionalHeader);
+	}
 	Header.sizeofoptheader = SizeOfOptionalHeader;
 	Header.signature = (char*)&buf[Header.e_lfanew];
 	Header.signature_raw = u32_read(buf, Header.e_lfanew);
-	Header.numofsections = (uint16_t)buf[Header.e_lfanew+6];
+	Header.numofsections = u16_read(buf, Header.e_lfanew+6);
 	Header.machine = u16_read(buf, Header.e_lfanew + 4);
 	Header.characteristic = u16_read(buf, Header.e_lfanew + 22);
-	Header.timedatestamp = u32_read(buf, Header.e_lfanew + 8);	
+	Header.timedatestamp = u32_read(buf, Header.e_lfanew + 8);
 }
 
 void optional_header(const unsigned char* buf) {
@@ -124,7 +151,7 @@ void data_directories(const unsigned char* buf) {
 			resource_rva = u32_read(buf, Header.optbase+128);
 			resource_size = u32_read(buf, Header.optbase+128+4);
 		} else {
-			printf("Malformed Header Magic (not PE32 or PE32+)\n");
+			printf("Malformed Header magic (not PE32 or PE32+)\n");
 		}
 		DataDirs.export_rva = export_rva;
 		DataDirs.export_size = export_size;
@@ -136,7 +163,8 @@ void data_directories(const unsigned char* buf) {
 }
 
 void section_table(const unsigned char* buf) {
-	uint32_t table_off = Header.optbase = Header.optbase + Header.sizeofoptheader;
+	uint32_t table_off = Header.optbase + Header.sizeofoptheader;
+	Header.optbase = table_off;
 	uint32_t n = Header.numofsections;
 	if (n > MAX_SECTIONS) {n = MAX_SECTIONS;}
 	if ((uint64_t)table_off + (uint64_t)n * 40 > Header.size) {
@@ -155,3 +183,5 @@ void section_table(const unsigned char* buf) {
 		sections.count += 1;
 	}	
 }
+
+// 1366311264

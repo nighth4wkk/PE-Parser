@@ -67,10 +67,29 @@ typedef struct {
 	uint32_t import_size;
 	uint32_t resource_rva;
 	uint32_t resource_size;
-} DataDirectoriesJson;
+} DataDirectories;
+
+typedef struct {
+    char* names[64];
+    uint32_t rva[64];
+    size_t count;
+} Export;
+
+typedef struct {
+    char* dllname;
+    char* names[256];
+} Import_Element;
+
+typedef struct {
+    Import_Element elements[128];
+    size_t count;
+} Import;
 
 extern FileJson File;
 extern HashJson Hashes;
 extern HeadersInfo Header;
 extern Sections sections;
-extern DataDirectoriesJson DataDirs;
+extern DataDirectories DataDirs;
+extern Export Exports;
+extern Import_Element imp_elem;
+extern Import Imports;
