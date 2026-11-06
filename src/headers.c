@@ -44,7 +44,7 @@ unsigned char* file_read(const char* file) {
 	return buf;
 }
 
-double enthropy_calc(const unsigned char* buf, uint32_t raw_size, uint32_t pointer_to_raw) {
+double entropy_calc(const unsigned char* buf, uint32_t raw_size, uint32_t pointer_to_raw) {
 	uint32_t m[256] = {0};
 	for (uint32_t i = 0; i < raw_size; ++i) {
 		uint32_t elem = buf[pointer_to_raw + i];
@@ -185,7 +185,7 @@ void data_directories(const unsigned char* buf) {
 	}
 }
 
-void section_table(const unsigned char* buf) {
+int section_table(const unsigned char* buf) {
 	uint32_t table_off = Header.optbase + Header.sizeofoptheader;
 	Header.optbase = table_off;
 	uint32_t n = Header.numofsections;
@@ -203,7 +203,12 @@ void section_table(const unsigned char* buf) {
 		s->raw_size = u32_read(buf, offset+16);
 		s->pointer_to_raw = u32_read(buf, offset+20);
 		s->characteristics = u32_read(buf, offset+36);
-		s->enthropy = enthropy_calc(buf, s->raw_size, s->pointer_to_raw); 
+		if (s->pointer_to_raw > Header.size || s->raw_size > Header.size - s->pointer_to_raw) {
+			fprintf(stderr, "Section data out of bounds\n");
+			return 1;
+		}
+		s->entropy = entropy_calc(buf, s->raw_size, s->pointer_to_raw); 
 		sections.count += 1;
-	}	
+	}
+	return 0;
 }

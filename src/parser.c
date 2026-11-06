@@ -37,14 +37,14 @@ void pe_info() {
 	printf("Import Table: RVA-0x%X, Size-0x%X\n", DataDirs.import_rva, DataDirs.import_size);
 	printf("Resources Table: RVA-0x%X, Size-0x%X\n\n", DataDirs.resource_rva, DataDirs.resource_size);
 	printf("Sections:\n");
-	for (uint32_t i = 0; i < Header.numofsections; ++i) {
+	for (uint32_t i = 0; i < sections.count; ++i) {
 		Section* s = &sections.SectionsList[i];
 		printf("\t[%d] %s\n", i, s->name);
 		printf("\t\tRawSize: 0x%X\n", s->raw_size);
 		printf("\t\tVirtualSize: 0x%X\n", s->virtual_size);
 		printf("\t\tPointerToRawData: 0x%X\n", s->pointer_to_raw);
 		printf("\t\tRVA: 0x%X\n", s->r_virtual_address);
-		printf("\t\tEnthropy: %f\n", s->enthropy);	
+		printf("\t\tEnthropy: %f\n", s->entropy);	
 	}
 }
 
@@ -107,7 +107,10 @@ int main(int argc, char* argv[]) {
 	data_directories(buf);
 	sha256(buf, outBuf_sha256);
 	md5(buf, outBuf_md5);
-	section_table(buf);
+	if (section_table(buf) == 1) {
+		free(buf);
+		return 1;
+	}
 	pack_data(argv[1]);
 	if (mode) {
 		pe_info();

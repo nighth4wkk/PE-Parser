@@ -137,7 +137,7 @@ void sections_to_json(FILE* f) {
         Section* s = &sections.SectionsList[i];
         fprintf(f, "\n\t{");
         json_kv_str(f, "name", s->name); json_comma(f);
-        json_kv_double(f, "enthropy", s->enthropy); json_comma(f);
+        json_kv_double(f, "entropy", s->entropy); json_comma(f);
         json_kv_hex(f, "rva", s->r_virtual_address); json_comma(f);
         json_kv_u32(f, "virtual_size", s->virtual_size); json_comma(f);
         json_kv_u32(f, "raw_size", s->raw_size); json_comma(f);

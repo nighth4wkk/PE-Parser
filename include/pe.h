@@ -15,7 +15,7 @@ typedef struct {
 	uint32_t raw_size;
     uint32_t pointer_to_raw;
     uint32_t characteristics;
-    double enthropy;
+    double entropy;
 } Section;
 
 typedef struct {

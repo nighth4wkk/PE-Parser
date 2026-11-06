@@ -78,7 +78,8 @@ void find_for_table_entry(const unsigned char* buf, int flag) {
                         uint32_t hint_name = rva_to_raw(elem);
                         if (hint_name != 0) {
                             imp_elem->names[idx] = (char*)(buf + hint_name + 2);
-                            if (flag == 1) {printf("\t[%d] %s\n", idx++, (char*)(buf + hint_name + 2));}
+                            if (flag == 1) {printf("\t[%d] %s\n", idx, (char*)(buf + hint_name + 2));}
+                            idx++;
                         }
                     }
                     current_ilt += 4;
@@ -95,7 +96,8 @@ void find_for_table_entry(const unsigned char* buf, int flag) {
                         uint32_t hint_name = rva_to_raw((uint32_t)elem);
                         if (hint_name != 0) {
                             imp_elem->names[idx] = (char*)(buf + hint_name + 2);
-                            if (flag == 1) {printf("\t[%d] %s\n", idx++, (char*)(buf + hint_name + 2));}
+                            if (flag == 1) {printf("\t[%d] %s\n", idx, (char*)(buf + hint_name + 2));}
+                            idx++;
                         }
                     }
                     current_ilt += 8;
