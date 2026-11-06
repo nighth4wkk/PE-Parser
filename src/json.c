@@ -4,6 +4,11 @@
 #include "json.h"
 #include "serialize.h"
 
+
+void json_kv_double(FILE *f, const char *k, double v) {
+    fprintf(f, "\n\t\"%s\": %f", k, v);
+}
+
 void json_comma(FILE* f) {
 	fprintf(f, ", ");
 }

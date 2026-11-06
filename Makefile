@@ -2,7 +2,7 @@ TARGET   = parser
 
 CC       = gcc
 CFLAGS   = -Wall -Wextra -O2 -Iinclude
-LDLIBS	 = -lcrypto
+LDLIBS	 = -lcrypto -lm
 SRC_DIR  = src
 
 SRCS     = $(wildcard $(SRC_DIR)/*.c)

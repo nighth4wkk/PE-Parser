@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <math.h>
 #include "pe.h"
 #include "headers.h"
 #include <sys/stat.h>
@@ -41,6 +42,23 @@ unsigned char* file_read(const char* file) {
 	Header.size = size;
 	close(fd);
 	return buf;
+}
+
+double enthropy_calc(const unsigned char* buf, uint32_t raw_size, uint32_t pointer_to_raw) {
+	uint32_t m[256] = {0};
+	for (uint32_t i = 0; i < raw_size; ++i) {
+		uint32_t elem = buf[pointer_to_raw + i];
+		m[elem] += 1;
+	}
+
+	float enth = 0.0;
+	for (int i = 0; i < 256; ++i) {
+		if (m[i] != 0) {
+			float prob = (float)m[i] / (float)raw_size;
+			enth = enth - prob * log2(prob);
+		}
+	}
+	return enth;
 }
 
 void sha256(const unsigned char* buffer, char outputBuffer[65]) {
@@ -86,18 +104,19 @@ void md5(const unsigned char* buffer, char outputBuffer[33]) {
 void pe_header(const unsigned char* buf) {
 	uint16_t SizeOfOptionalHeader = u16_read(buf, Header.e_lfanew+20);
 	if (SizeOfOptionalHeader > Header.size - (Header.e_lfanew + 24)) {
-		printf("Malformed OptionalHeader - uncorrect size 0x%X\n", SizeOfOptionalHeader);
+		fprintf(stderr, "Malformed OptionalHeader - uncorrect size 0x%X\n", SizeOfOptionalHeader);
+	} else {
+		Header.sizeofoptheader = SizeOfOptionalHeader;
+		Header.signature = (char*)&buf[Header.e_lfanew];
+		Header.signature_raw = u32_read(buf, Header.e_lfanew);
+		Header.numofsections = u16_read(buf, Header.e_lfanew+6);
+		Header.machine = u16_read(buf, Header.e_lfanew + 4);
+		Header.characteristic = u16_read(buf, Header.e_lfanew + 22);
+		Header.timedatestamp = u32_read(buf, Header.e_lfanew + 8);
 	}
-	Header.sizeofoptheader = SizeOfOptionalHeader;
-	Header.signature = (char*)&buf[Header.e_lfanew];
-	Header.signature_raw = u32_read(buf, Header.e_lfanew);
-	Header.numofsections = u16_read(buf, Header.e_lfanew+6);
-	Header.machine = u16_read(buf, Header.e_lfanew + 4);
-	Header.characteristic = u16_read(buf, Header.e_lfanew + 22);
-	Header.timedatestamp = u32_read(buf, Header.e_lfanew + 8);
 }
 
-void optional_header(const unsigned char* buf) {
+int optional_header(const unsigned char* buf) {
 	uint32_t opt_Base = Header.e_lfanew+24;
 	uint16_t magic = (uint16_t)buf[opt_Base] | ((uint16_t)buf[opt_Base+1] << 8);
 	Header.magic = magic;
@@ -115,6 +134,7 @@ void optional_header(const unsigned char* buf) {
 		Header.numofrvaandsizes = NumberOfRvaAndSizes;
 		Header.entrypoint = (uint64_t)EntryPoint_addr;
 		Header.imagebase = (uint64_t)ImageBase;
+		return 0;
 	} else if (magic == PE32P_MAGIC) {
 		uint32_t EntryPoint_addr = u32_read(buf, Header.optbase+16);
 		uint64_t ImageBase = u64_read(buf, Header.optbase+24);
@@ -122,7 +142,10 @@ void optional_header(const unsigned char* buf) {
 		Header.numofrvaandsizes = NumberOfRvaAndSizes;
 		Header.entrypoint = (uint64_t)EntryPoint_addr;
 		Header.imagebase = (uint64_t)ImageBase;
+		return 0;
 	}
+	fprintf(stderr, "Unknown magic\n");
+	return 1;
 }
 
 
@@ -180,8 +203,7 @@ void section_table(const unsigned char* buf) {
 		s->raw_size = u32_read(buf, offset+16);
 		s->pointer_to_raw = u32_read(buf, offset+20);
 		s->characteristics = u32_read(buf, offset+36);
+		s->enthropy = enthropy_calc(buf, s->raw_size, s->pointer_to_raw); 
 		sections.count += 1;
 	}	
 }
-
-// 1366311264

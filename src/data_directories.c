@@ -17,16 +17,16 @@ uint32_t rva_to_raw(uint32_t rva) {
     return 0;
 }
 
-void find_for_table_entry(const unsigned char* buf) {
+void find_for_table_entry(const unsigned char* buf, int flag) {
     uint32_t export_raw = rva_to_raw(DataDirs.export_rva);
     if (export_raw != 0) { // Export Table
-        printf("\n[+] Export table found at 0x%X\n", export_raw);
+        if (flag == 1) {printf("\n[+] Export table found at 0x%X\n", export_raw);}
         uint32_t addr_of_names_rva = u32_read(buf, export_raw + 32);
         uint32_t num_of_names = u32_read(buf, export_raw + 24);
         uint32_t names_raw = rva_to_raw(addr_of_names_rva);
 
         if (names_raw != 0) {
-            printf("Exported functions:\n");
+            if (flag == 1) {printf("Exported functions:\n");}
             for (uint32_t i = 0; i < num_of_names; ++i) {
                 uint32_t name_rva = u32_read(buf, names_raw + 4*i);
                 uint32_t name_raw = rva_to_raw(name_rva);
@@ -35,18 +35,18 @@ void find_for_table_entry(const unsigned char* buf) {
                     Exports.names[i] = (char*)(buf + name_raw);
                     Exports.rva[i] = u32_read(buf, names_raw + 4*i);
                     Exports.count += 1;
-                    printf("\t[%d] %s\n", i, (buf + name_raw));
+                    if (flag == 1) {printf("\t[%d] %s\n", i, (buf + name_raw));}
                 }
             }
-            printf("\n");
+            if (flag == 1) {printf("\n");}
         }
     } else {
-        printf("[-] Export table not found\n");
+        if (flag == 1) {printf("\n[-] Export table not found\n");}
     }
 
     uint32_t import_raw = rva_to_raw(DataDirs.import_rva);
     if (import_raw != 0) { // Import Table
-        printf("\n[+] Import table found at 0x%X\n", import_raw);
+        if (flag == 1) {printf("\n[+] Import table found at 0x%X\n", import_raw);}
         uint32_t current_raw = import_raw;
         int id = 0;
         while (1) {
@@ -59,7 +59,7 @@ void find_for_table_entry(const unsigned char* buf) {
             }
             uint32_t name_raw = rva_to_raw(name_rva);
             if (name_raw != 0) {
-                printf("DLL:\t %s\n", (char*)(buf + name_raw));
+                if (flag == 1) {printf("DLL:\t %s\n", (char*)(buf + name_raw));}
                 imp_elem->dllname = (char*)(buf + name_raw);
                 Imports.count += 1;
             }
@@ -78,7 +78,7 @@ void find_for_table_entry(const unsigned char* buf) {
                         uint32_t hint_name = rva_to_raw(elem);
                         if (hint_name != 0) {
                             imp_elem->names[idx] = (char*)(buf + hint_name + 2);
-                            printf("\t[%d] %s\n", idx++, (char*)(buf + hint_name + 2));
+                            if (flag == 1) {printf("\t[%d] %s\n", idx++, (char*)(buf + hint_name + 2));}
                         }
                     }
                     current_ilt += 4;
@@ -95,7 +95,7 @@ void find_for_table_entry(const unsigned char* buf) {
                         uint32_t hint_name = rva_to_raw((uint32_t)elem);
                         if (hint_name != 0) {
                             imp_elem->names[idx] = (char*)(buf + hint_name + 2);
-                            printf("\t[%d] %s\n", idx++, (char*)(buf + hint_name + 2));
+                            if (flag == 1) {printf("\t[%d] %s\n", idx++, (char*)(buf + hint_name + 2));}
                         }
                     }
                     current_ilt += 8;
@@ -104,6 +104,6 @@ void find_for_table_entry(const unsigned char* buf) {
             current_raw += 20;
         }
     } else {
-        printf("[-] Import table not found\n");
+        if (flag == 1) {printf("[-] Import table not found\n");}
     }
 }

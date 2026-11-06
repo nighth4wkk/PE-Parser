@@ -3,12 +3,13 @@
 Парсер PE-файлов на C.
 Читает основные заголовки, секции, Import и Export Table, считает MD5/SHA256 и может выводить весь результат в JSON.
 
-### Что умеет
+### Что делает
 
 - DOS + NT Header
 - Optional Header (PE32 / PE32+)
 - Data Directories (Export, Import, Resources)
 - Section Table
+- Section's enthropy
 - Import Table
 - Export Table
 - MD5 и SHA256 всего файла
