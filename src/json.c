@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include "json.h"
 #include "serialize.h"
 
@@ -56,8 +57,24 @@ void json_kv_hex(FILE* f, const char* k, uint64_t v) {
 }
 
 int json_output() {
-	FILE* f = fopen("output.json", "w");
-	if (!f) {return 1;};
+    FILE* f;
+    char buf[64] = {0};
+    char namehold[33] = {0};
+    char* p = strrchr(File.path, '/');
+
+    if (p == NULL) {
+        strncpy(namehold, File.path, 32);
+    } else {
+        strncpy(namehold, p+1, 32); 
+    }
+
+    snprintf(buf, sizeof(buf), "report_%s.json", namehold);
+    f = fopen(buf, "w");
+
+	if (!f) {
+        return 1;
+    }
+
 	fprintf(f, "{\n");
 	file_to_json(f);
 	hashes_to_json(f);

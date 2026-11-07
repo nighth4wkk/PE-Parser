@@ -5,9 +5,10 @@
 #include <unistd.h>
 #include <string.h>
 #include <math.h>
+#include <sys/stat.h>
 #include "pe.h"
 #include "headers.h"
-#include <sys/stat.h>
+#include "detect.h"
 
 unsigned char* file_read(const char* file) {
 	int fd = open(file, O_RDONLY);
@@ -45,16 +46,19 @@ unsigned char* file_read(const char* file) {
 }
 
 double entropy_calc(const unsigned char* buf, uint32_t raw_size, uint32_t pointer_to_raw) {
+	if (raw_size == 0) {
+		return 0.0;
+	}
 	uint32_t m[256] = {0};
 	for (uint32_t i = 0; i < raw_size; ++i) {
 		uint32_t elem = buf[pointer_to_raw + i];
 		m[elem] += 1;
 	}
-
+	float prob = 0.0;
 	float enth = 0.0;
 	for (int i = 0; i < 256; ++i) {
 		if (m[i] != 0) {
-			float prob = (float)m[i] / (float)raw_size;
+			prob = (float)m[i] / (float)raw_size;
 			enth = enth - prob * log2(prob);
 		}
 	}
@@ -101,24 +105,48 @@ void md5(const unsigned char* buffer, char outputBuffer[33]) {
 	}
 }
 
-void pe_header(const unsigned char* buf) {
+int pe_header(const unsigned char* buf) {
 	uint16_t SizeOfOptionalHeader = u16_read(buf, Header.e_lfanew+20);
 	if (SizeOfOptionalHeader > Header.size - (Header.e_lfanew + 24)) {
 		fprintf(stderr, "Malformed OptionalHeader - uncorrect size 0x%X\n", SizeOfOptionalHeader);
-	} else {
-		Header.sizeofoptheader = SizeOfOptionalHeader;
-		Header.signature = (char*)&buf[Header.e_lfanew];
-		Header.signature_raw = u32_read(buf, Header.e_lfanew);
-		Header.numofsections = u16_read(buf, Header.e_lfanew+6);
-		Header.machine = u16_read(buf, Header.e_lfanew + 4);
-		Header.characteristic = u16_read(buf, Header.e_lfanew + 22);
-		Header.timedatestamp = u32_read(buf, Header.e_lfanew + 8);
+		return 1;
 	}
+	Header.sizeofoptheader = SizeOfOptionalHeader;
+	Header.signature = (char*)&buf[Header.e_lfanew];
+	Header.signature_raw = u32_read(buf, Header.e_lfanew);
+	Header.numofsections = u16_read(buf, Header.e_lfanew+6);
+	Header.machine = u16_read(buf, Header.e_lfanew + 4);
+	Header.characteristic = u16_read(buf, Header.e_lfanew + 22);
+	Header.timedatestamp = u32_read(buf, Header.e_lfanew + 8);
+	return 0;
 }
 
 int optional_header(const unsigned char* buf) {
 	uint32_t opt_Base = Header.e_lfanew+24;
-	uint16_t magic = (uint16_t)buf[opt_Base] | ((uint16_t)buf[opt_Base+1] << 8);
+	size_t opt_size = Header.sizeofoptheader;
+	
+	if (opt_size < 2) {
+		fprintf(stderr, "Optional header is too small for magic\n");
+		return 1;
+	}
+
+	uint16_t magic = u16_read(buf, opt_Base);
+	size_t minimum_size;
+
+	if (magic == PE32_MAGIC) {
+		minimum_size = 96;
+	} else if (magic == PE32P_MAGIC) {
+		minimum_size = 112;
+	} else {
+		fprintf(stderr, "Unknown Optional Header magic: 0x%X\n", magic);
+		return 1;
+	}
+
+	if (opt_size < minimum_size) {
+		fprintf(stderr, "Optional Header is too small\n");
+		return 1;
+	}
+
 	Header.magic = magic;
 	Header.optbase = opt_Base;
 	Header.subsystem = u16_read(buf, opt_Base + 68);
@@ -127,6 +155,7 @@ int optional_header(const unsigned char* buf) {
 	Header.majorsubversion = u16_read(buf, opt_Base + 48);
 	Header.minorsubversion = u16_read(buf, opt_Base + 50);
 	Header.dll_characteristics = u16_read(buf, opt_Base + 70);
+
 	if (magic == PE32_MAGIC) { 
 		uint32_t EntryPoint_addr = u32_read(buf, Header.optbase+16);
 		uint32_t ImageBase = u32_read(buf, Header.optbase+28);
@@ -144,7 +173,7 @@ int optional_header(const unsigned char* buf) {
 		Header.imagebase = (uint64_t)ImageBase;
 		return 0;
 	}
-	fprintf(stderr, "Unknown magic\n");
+	fprintf(stderr, "Unknown Optional Header magic\n");
 	return 1;
 }
 
@@ -189,9 +218,13 @@ int section_table(const unsigned char* buf) {
 	uint32_t table_off = Header.optbase + Header.sizeofoptheader;
 	Header.optbase = table_off;
 	uint32_t n = Header.numofsections;
-	if (n > MAX_SECTIONS) {n = MAX_SECTIONS;}
+
+	if (n > MAX_SECTIONS) {
+		n = MAX_SECTIONS;
+	}
 	if ((uint64_t)table_off + (uint64_t)n * 40 > Header.size) {
-		printf("Section table out of bounds\n");
+		fprintf(stderr, "Section table out of bounds\n");
+		return 1;
 	}
 	for (uint32_t i = 0; i < n; ++i) {
 		uint32_t offset = table_off + 40*i;
@@ -203,11 +236,17 @@ int section_table(const unsigned char* buf) {
 		s->raw_size = u32_read(buf, offset+16);
 		s->pointer_to_raw = u32_read(buf, offset+20);
 		s->characteristics = u32_read(buf, offset+36);
-		if (s->pointer_to_raw > Header.size || s->raw_size > Header.size - s->pointer_to_raw) {
+		if (s->raw_size !=0 && (s->pointer_to_raw > Header.size || s->raw_size > Header.size - s->pointer_to_raw)) {
 			fprintf(stderr, "Section data out of bounds\n");
 			return 1;
 		}
 		s->entropy = entropy_calc(buf, s->raw_size, s->pointer_to_raw); 
+		
+		// ================== last section struct ========================
+		last_sec.last_sec_pointer = s->pointer_to_raw;
+		last_sec.last_sec_size = s->raw_size;
+		// ==============================================================
+
 		sections.count += 1;
 	}
 	return 0;

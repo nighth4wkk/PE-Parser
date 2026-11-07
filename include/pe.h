@@ -8,6 +8,12 @@
 #define PE32P_OPTSIZE 0xF0
 #define MAX_SECTIONS 96
 
+
+typedef struct {
+    uint32_t last_sec_pointer;
+    uint32_t last_sec_size;
+} Last_Section;
+
 typedef struct {
 	char name[9];
 	uint32_t r_virtual_address;
@@ -54,6 +60,7 @@ typedef struct {
     uint16_t machine;
     uint32_t timestamp;
     uint16_t subsystem;
+    double entropy;
 } FileJson;
 
 typedef struct {
@@ -94,3 +101,4 @@ extern DataDirectories DataDirs;
 extern Export Exports;
 extern Import_Element imp_elem;
 extern Import Imports;
+extern Last_Section last_sec;

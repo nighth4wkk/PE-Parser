@@ -105,7 +105,8 @@ void file_to_json(FILE* f) {
     json_kv_str(f, "type", (File.type == PE32_MAGIC ? "PE32" : "PE32+")); json_comma(f);
     json_kv_str(f, "machine", machine_name(File.machine)); json_comma(f);
     json_kv_str(f, "subsystem", subsystem_name(File.subsystem)); json_comma(f);
-    json_kv_u32(f, "timestamp_raw", File.timestamp);
+    json_kv_u32(f, "timestamp_raw", File.timestamp); json_comma(f);
+    json_kv_double(f, "entropy", File.entropy); 
     fprintf(f, "\n\t},\n");
 }
 
@@ -183,6 +184,11 @@ void imports_to_json(FILE* f) {
             int idx = 0;
             if (imp_elem->names[idx] == 0) {
                 fprintf(f, "]");
+                if (Imports.count == 1) {
+                    fprintf(f, "\n}");
+                } else {
+                    fprintf(f, "\n},");
+                }
             } else {
                 while (imp_elem->names[idx] != 0) {
                     fprintf(f, "\n\t{");

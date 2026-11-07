@@ -1,7 +1,6 @@
 # PE-Parser
 
-Парсер PE-файлов на C.
-Читает основные заголовки, секции, Import и Export Table, считает MD5/SHA256 и может выводить весь результат в JSON.
+Парсер PE-файлов на C для Linux
 
 ### Что делает
 
@@ -9,11 +8,11 @@
 - Optional Header (PE32 / PE32+)
 - Data Directories (Export, Import, Resources)
 - Section Table
-- Section's enthropy
+- Section's entropy
 - Import Table
 - Export Table
 - MD5 и SHA256 всего файла
-- Вывод результата в консоль или в файл output.json
+- Вывод результата в консоль или в файл report_<filename>.json
 
 ### Сборка
 

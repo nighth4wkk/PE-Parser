@@ -13,6 +13,7 @@
 #include "serialize.h"
 #include "json.h"
 #include "data_directories.h"
+#include "detect.h"
 
 HeadersInfo Header = {0};
 Sections sections = {0};
@@ -22,6 +23,7 @@ DataDirectories DataDirs = {0};
 Export Exports = {0};
 Import Imports = {0};
 Import_Element imp_elem = {0};
+Last_Section last_sec = {0};
 
 void pe_info() {
 	printf("Signature: %s\n", Header.signature);
@@ -44,17 +46,18 @@ void pe_info() {
 		printf("\t\tVirtualSize: 0x%X\n", s->virtual_size);
 		printf("\t\tPointerToRawData: 0x%X\n", s->pointer_to_raw);
 		printf("\t\tRVA: 0x%X\n", s->r_virtual_address);
-		printf("\t\tEnthropy: %f\n", s->entropy);	
+		printf("\t\tEntropy: %f\n", s->entropy);	
 	}
 }
 
-void pack_data(char* arg) {
+void pack_data(unsigned char* buf, char* arg) {
 	File.path = arg;
 	File.size = Header.size;
 	File.type = Header.magic;
 	File.machine = Header.machine;
 	File.timestamp = Header.timedatestamp;
 	File.subsystem = Header.subsystem;
+	File.entropy = entropy_calc(buf, File.size, 0); 
 }
 
 int main(int argc, char* argv[]) {
@@ -63,6 +66,7 @@ int main(int argc, char* argv[]) {
 		fprintf(stderr, "Usage: ./parser <file.exe> [-json]\n\nArguments:\n\t<file.exe>\tPath to the executable file to parse.\nOptions:\n\t-json\t\tOutput results in JSON format instead of plain text.\n");
 		return 1;
 	}
+
 	if (argc == 3) {
 		if (!strcmp(argv[2], "-json")) {
 			mode = 0;
@@ -76,22 +80,25 @@ int main(int argc, char* argv[]) {
 	char outBuf_sha256[65];
 	char outBuf_md5[33];
 
-	if (buf[0]!='M' || buf[1]!='Z') {
-		fprintf(stderr, "Unsupported file format or broken DOS header\n");
-		free(buf);
-		return 1;
-	}
 	if (Header.size < 0x40) {
 		fprintf(stderr, "Malformed file size\n");	
 		free(buf);
 		return 1;
 	}
+
+	if (buf[0]!='M' || buf[1]!='Z') {
+		fprintf(stderr, "Unsupported file format or broken DOS header\n");
+		free(buf);
+		return 1;
+	}
+
 	Header.e_lfanew = u32_read(buf, 0x3c);
 	if (Header.e_lfanew > Header.size - 24) {
 		fprintf(stderr, "Malformed e_lfanew\n");
 		free(buf);
 		return 1;
 	}
+
 	if (u32_read(buf, Header.e_lfanew) != 0x00004550) {
 		fprintf(stderr, "Malformed PE-signature (not PE)\n");
 		free(buf);
@@ -99,11 +106,16 @@ int main(int argc, char* argv[]) {
 	}
 
 	Header.optbase = Header.e_lfanew + 24;
-	pe_header(buf);
+	if (pe_header(buf) == 1) {
+		free(buf);
+		return 1;
+	}
+
 	if (optional_header(buf) == 1) {
 		free(buf);
 		return 1;
-	};
+	}
+
 	data_directories(buf);
 	sha256(buf, outBuf_sha256);
 	md5(buf, outBuf_md5);
@@ -111,16 +123,20 @@ int main(int argc, char* argv[]) {
 		free(buf);
 		return 1;
 	}
-	pack_data(argv[1]);
+
+	pack_data(buf, argv[1]);
 	if (mode) {
 		pe_info();
 	}
+
 	find_for_table_entry(buf, mode);	
 	if (mode == 0 && json_output() != 0) {
 		fprintf(stderr, "Error opening output.json\n");
 		free(buf);
 		return 1;
 	}
+
+	check_overlay();
 	free(buf);
 	return 0;
 }	
